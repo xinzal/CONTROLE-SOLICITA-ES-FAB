@@ -34,232 +34,291 @@
   }
 
   main {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: 30px;
+    padding: 30px;
   }
 
-  .tab-buttons {
+  h1 {
+    color: var(--primary);
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .filters {
     display: flex;
     gap: 15px;
-    margin-bottom: 25px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
-  .tab-buttons button {
-    background: var(--primary);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: var(--border-radius);
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.3s ease;
-  }
-
-  .tab-buttons button:hover {
-    background: var(--secondary);
-  }
-
-  .tab-content {
-    display: none;
-    background: var(--card-bg);
-    border-radius: var(--border-radius);
-    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-    padding: 25px;
-    width: 100%;
-    max-width: 750px;
-  }
-
-  .tab-content.active {
-    display: block;
-  }
-
-  form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-  }
-
-  input, textarea, select {
-    padding: 10px;
+  .filters input, .filters select {
+    padding: 8px 12px;
     border-radius: var(--border-radius);
     border: 1px solid #ccc;
     font-size: 1em;
-    width: 100%;
-    box-sizing: border-box;
   }
 
-  button.submit-btn {
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+  }
+
+  th, td {
+    padding: 12px 10px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    font-size: 0.95em;
+  }
+
+  th {
     background: var(--primary);
     color: white;
-    border: none;
-    padding: 12px;
-    font-size: 1em;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    transition: 0.3s;
+    font-weight: 500;
   }
 
-  button.submit-btn:hover {
+  tr:hover {
+    background: #f1f8ff;
+  }
+
+  tr.green {
+    background: #c8f7c5 !important;
+  }
+
+  button {
+    padding: 6px 10px;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 0.9em;
+  }
+
+  .btn-pdf {
+    background: var(--primary);
+    color: white;
+  }
+
+  .btn-pdf:hover {
     background: var(--secondary);
   }
 
-  .success-message, .error-message {
+  .btn-email {
+    background: #43a047;
+    color: white;
+    margin-left: 5px;
+  }
+
+  .btn-email:hover {
+    background: #388e3c;
+  }
+
+  /* Modal */
+  .modal {
     display: none;
-    padding: 10px;
+    position: fixed;
+    z-index: 10;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5);
+  }
+
+  .modal-content {
+    background-color: var(--card-bg);
+    margin: 8% auto;
+    padding: 20px;
+    width: 320px;
     border-radius: var(--border-radius);
-    font-weight: 500;
-    margin-top: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
   }
 
-  .success-message {
-    background: #c8e6c9;
-    color: #256029;
+  .modal-content h2 {
+    margin-top: 0;
+    color: var(--primary);
   }
 
-  .error-message {
-    background: #ffcdd2;
-    color: #b71c1c;
+  .modal-content input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border-radius: var(--border-radius);
+    border: 1px solid #ccc;
+    box-sizing: border-box;
   }
 
-  footer {
-    text-align: center;
-    padding: 15px;
-    color: #666;
-    font-size: 0.9em;
-    margin-top: 30px;
+  .close-btn {
+    background-color: red;
+    color: white;
+    float: right;
   }
 </style>
 </head>
-
 <body>
+
 <header>Controle de Solicitações FAB</header>
-
 <main>
-  <div class="tab-buttons">
-    <button onclick="showTab('pedidos')">Cadastrar Pedido</button>
-    <button onclick="showTab('emails')">Cadastrar E-mails</button>
+<h1>Pedidos</h1>
+
+<div class="filters">
+  <label>Filtrar Fábrica:
+    <select id="filtroFabrica" onchange="filtrarTabela()">
+      <option value="">Todas</option>
+    </select>
+  </label>
+  <label>Pesquisar Pedido:
+    <input type="text" id="pesquisaPedido" oninput="filtrarTabela()" placeholder="Número do Pedido">
+  </label>
+</div>
+
+<table id="pedidosTable">
+  <thead>
+    <tr>
+      <th>Número do Pedido</th>
+      <th>Fábrica</th>
+      <th>Código do Item</th>
+      <th>Descrição</th>
+      <th>Quantidade</th>
+      <th>Data do Pedido</th>
+      <th>Pallets</th>
+      <th>Peso Separação</th>
+      <th>Quantidade Estoque</th>
+      <th>PDF Remessa</th>
+      <th>Ações</th>
+    </tr>
+  </thead>
+  <tbody id="pedidosBody">
+    <tr><td colspan="11" style="text-align:center;">Carregando pedidos...</td></tr>
+  </tbody>
+</table>
+
+<!-- Modal para cadastro de emails -->
+<div id="modalEmail" class="modal">
+  <div class="modal-content">
+    <button class="close-btn" onclick="fecharModal()">X</button>
+    <h2>Cadastrar E-mails</h2>
+    <input type="text" id="fabricaEmail" placeholder="Fábrica">
+    <input type="text" id="emailPrincipal" placeholder="E-mail Principal (separe por vírgula)">
+    <input type="text" id="emailCopia" placeholder="E-mail Cópia (opcional)">
+    <button class="btn-email" onclick="salvarEmail()">Salvar E-mails</button>
   </div>
-
-  <!-- ABA DE PEDIDOS -->
-  <div id="pedidos" class="tab-content active">
-    <h2>Cadastro de Pedido</h2>
-    <form id="pedidoForm">
-      <input type="text" id="numeroPedido" placeholder="Número do Pedido" required>
-      <input type="text" id="fabrica" placeholder="Fábrica" required>
-      <input type="text" id="codigoItem" placeholder="Código do Item" required>
-      <input type="text" id="descricaoItem" placeholder="Descrição do Item" required>
-      <input type="number" id="quantidadeItem" placeholder="Quantidade do Item" required>
-      <input type="date" id="dataPedido" required>
-      <input type="file" id="pdfFile" accept="application/pdf" required>
-
-      <button type="button" class="submit-btn" onclick="enviarPDF()">Enviar PDF</button>
-      <button type="button" class="submit-btn" style="background:#43a047" onclick="enviarEmail()">Enviar E-mail</button>
-    </form>
-
-    <p class="success-message" id="pedidoSuccess">✅ Pedido enviado com sucesso!</p>
-    <p class="error-message" id="pedidoError">❌ Erro ao enviar o pedido.</p>
-  </div>
-
-  <!-- ABA DE E-MAILS -->
-  <div id="emails" class="tab-content">
-    <h2>Cadastro de E-mails</h2>
-    <form id="emailForm">
-      <input type="text" id="fabricaEmail" placeholder="Fábrica" required>
-      <input type="text" id="emailPrincipal" placeholder="E-mail Principal (separe múltiplos com vírgula)" required>
-      <input type="text" id="emailCopia" placeholder="E-mail Cópia (opcional, separado por vírgula)">
-      <button type="button" class="submit-btn" onclick="salvarEmail()">Salvar E-mails</button>
-    </form>
-
-    <p class="success-message" id="emailSuccess">✅ E-mails cadastrados com sucesso!</p>
-    <p class="error-message" id="emailError">❌ Erro ao cadastrar e-mails.</p>
-  </div>
-</main>
-
-<footer>© 2025 - Sistema Controle Solicitações FAB</footer>
+</div>
 
 <script>
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwyIQSVSSZdsc1AMqBI-UiO2dLErD5UnNKrnkWjhsMs8mMGpwPRYddE9gO0X66IGJCi/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwyIQSVSSZdsc1AMqBI-UiO2dLErD5UnNKrnkWjhsMs8mMGpwPRYddE9gO0X66IGJCi/exec";
+let pedidoSelecionado = null;
 
-  function showTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-  }
+// ====== CARREGAR PEDIDOS ======
+async function carregarPedidos() {
+  const tbody = document.getElementById("pedidosBody");
+  tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">Carregando...</td></tr>`;
 
-  async function enviarPDF() {
-    const form = document.getElementById('pedidoForm');
-    const file = document.getElementById('pdfFile').files[0];
+  try {
+    const res = await fetch(WEB_APP_URL + "?action=get");
+    const pedidos = await res.json();
 
-    if (!file) {
-      alert('Selecione um arquivo PDF antes de enviar.');
+    if (pedidos.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">Nenhum pedido encontrado</td></tr>`;
       return;
     }
 
-    const formData = new FormData();
-    formData.append('numeroPedido', document.getElementById('numeroPedido').value);
-    formData.append('fabrica', document.getElementById('fabrica').value);
-    formData.append('codigoItem', document.getElementById('codigoItem').value);
-    formData.append('descricaoItem', document.getElementById('descricaoItem').value);
-    formData.append('quantidadeItem', document.getElementById('quantidadeItem').value);
-    formData.append('dataPedido', document.getElementById('dataPedido').value);
-    formData.append('pdfFile', file);
+    tbody.innerHTML = "";
+    pedidos.forEach((p,i) => {
+      const tr = document.createElement("tr");
+      tr.dataset.index = i;
+      tr.dataset.numero = p.numero;
+      tr.dataset.fabrica = p.fabrica;
+      tr.dataset.codigo = p.codigo;
 
-    try {
-      const response = await fetch(WEB_APP_URL, { method: 'POST', body: formData });
-      const result = await response.text();
-      if (result.includes('Sucesso')) {
-        form.reset();
-        showMessage('pedidoSuccess');
-      } else {
-        showMessage('pedidoError');
-      }
-    } catch {
-      showMessage('pedidoError');
-    }
+      if(p.pdf) tr.classList.add("green");
+
+      tr.innerHTML = `
+        <td>${p.numero}</td>
+        <td>${p.fabrica}</td>
+        <td>${p.codigo}</td>
+        <td>${p.descricao}</td>
+        <td>${p.quantidade}</td>
+        <td>${p.dataPedido}</td>
+        <td>${p.pallets}</td>
+        <td>${p.peso}</td>
+        <td>${p.estoque}</td>
+        <td>${p.pdf ? `<a href="${p.pdf}" target="_blank">Ver PDF</a>` : ""}</td>
+        <td>
+          <button class="btn-pdf" onclick="abrirModalEmail(${i})">Cadastrar E-mails</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    atualizarFiltroFabrica(pedidos);
+  } catch(err) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">Erro ao carregar pedidos</td></tr>`;
   }
+}
 
-  async function salvarEmail() {
-    const fabrica = document.getElementById('fabricaEmail').value;
-    const emailPrincipal = document.getElementById('emailPrincipal').value;
-    const emailCopia = document.getElementById('emailCopia').value;
+// ====== FILTRO ======
+function atualizarFiltroFabrica(pedidos){
+  const select = document.getElementById("filtroFabrica");
+  const fabricas = [...new Set(pedidos.map(p=>p.fabrica))];
+  select.innerHTML = `<option value="">Todas</option>`;
+  fabricas.forEach(f=>{
+    const option = document.createElement("option");
+    option.value = f;
+    option.textContent = f;
+    select.appendChild(option);
+  });
+}
 
-    try {
-      const response = await fetch(WEB_APP_URL + `?action=salvarEmail&fabrica=${encodeURIComponent(fabrica)}&emailPrincipal=${encodeURIComponent(emailPrincipal)}&emailCopia=${encodeURIComponent(emailCopia)}`);
-      const result = await response.text();
-      if (result.includes('Sucesso')) {
-        document.getElementById('emailForm').reset();
-        showMessage('emailSuccess');
-      } else {
-        showMessage('emailError');
-      }
-    } catch {
-      showMessage('emailError');
-    }
-  }
+function filtrarTabela() {
+  const filtroFabrica = document.getElementById("filtroFabrica").value.toLowerCase();
+  const pesquisaPedido = document.getElementById("pesquisaPedido").value.toLowerCase();
+  document.querySelectorAll("#pedidosBody tr").forEach(tr=>{
+    const numero = tr.dataset.numero.toLowerCase();
+    const fabrica = tr.dataset.fabrica.toLowerCase();
+    const mostrar = (filtroFabrica=="" || fabrica===filtroFabrica) &&
+                    (pesquisaPedido=="" || numero.includes(pesquisaPedido));
+    tr.style.display = mostrar ? "" : "none";
+  });
+}
 
-  async function enviarEmail() {
-    const numero = document.getElementById('numeroPedido').value;
-    const fabrica = document.getElementById('fabrica').value;
-    try {
-      const response = await fetch(WEB_APP_URL + `?action=enviarEmail&numeroPedido=${encodeURIComponent(numero)}&fabrica=${encodeURIComponent(fabrica)}`);
-      const result = await response.text();
-      if (result.includes('Sucesso')) {
-        showMessage('pedidoSuccess');
-      } else {
-        showMessage('pedidoError');
-      }
-    } catch {
-      showMessage('pedidoError');
-    }
-  }
+// ====== MODAL E-MAIL ======
+function abrirModalEmail(index){
+  const row = document.querySelector(`tr[data-index='${index}']`);
+  pedidoSelecionado = {
+    numero: row.dataset.numero,
+    fabrica: row.dataset.fabrica,
+    codigo: row.dataset.codigo
+  };
+  document.getElementById("modalEmail").style.display="block";
+}
 
-  function showMessage(id) {
-    const msg = document.getElementById(id);
-    msg.style.display = 'block';
-    setTimeout(() => msg.style.display = 'none', 3000);
-  }
+function fecharModal(){
+  document.getElementById("modalEmail").style.display="none";
+  pedidoSelecionado = null;
+  document.getElementById("fabricaEmail").value="";
+  document.getElementById("emailPrincipal").value="";
+  document.getElementById("emailCopia").value="";
+}
+
+// ====== SALVAR EMAIL ======
+async function salvarEmail(){
+  const fabrica = document.getElementById("fabricaEmail").value;
+  const emailPrincipal = document.getElementById("emailPrincipal").value;
+  const emailCopia = document.getElementById("emailCopia").value;
+
+  if(!fabrica || !emailPrincipal){ alert("Preencha a fábrica e o e-mail principal."); return; }
+
+  try{
+    const res = await fetch(WEB_APP_URL+`?action=salvarEmail&fabrica=${encodeURIComponent(fabrica)}&emailPrincipal=${encodeURIComponent(emailPrincipal)}&emailCopia=${encodeURIComponent(emailCopia)}`);
+    const result = await res.text();
+    if(result.includes("success")){ alert("E-mails salvos com sucesso"); fecharModal(); }
+    else alert("Erro ao salvar e-mails");
+  } catch { alert("Erro de conexão"); }
+}
+
+// ====== INÍCIO ======
+carregarPedidos();
 </script>
-
 </body>
 </html>
