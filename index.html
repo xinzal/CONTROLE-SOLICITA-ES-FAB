@@ -91,18 +91,22 @@
   tr:hover {
     background: #f1f5f9;
   }
-  button.upload {
-    background: #34a853;
-    color: white;
-    border-radius: 6px;
-    padding: 8px 15px;
-    margin-top: 5px;
-    cursor: pointer;
-    border: none;
-    font-weight: bold;
+  .upload-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
-  button.upload:hover {
-    background: #2c8c46;
+  .upload-wrapper input[type="file"] {
+    display: none;
+  }
+  .btn-upload {
+    font-size: 22px;
+    cursor: pointer;
+    transition: transform 0.2s, color 0.2s;
+  }
+  .btn-upload:hover {
+    transform: scale(1.3);
+    color: #34a853;
   }
   .btn-email {
     background: #fbbc05;
@@ -207,7 +211,7 @@
     async function carregarPedidos() {
       const res = await fetch(webAppUrl);
       const pedidos = await res.json();
-      pedidosCache = pedidos; // armazenar para filtro
+      pedidosCache = pedidos;
       preencherFiltros(pedidos);
       atualizarTabela(pedidos);
     }
@@ -240,7 +244,11 @@
           <td>${p.peso}</td>
           <td>${p.estoque}</td>
           <td>${p.pdf ? `<a href="${p.pdf}" target="_blank">Abrir</a>` : '—'}</td>
-          <td><input type="file" accept="application/pdf" onchange="uploadPDF('${p.numero}', '${p.codigo}', this)"></td>
+          <td class="upload-wrapper">
+            <label class="btn-upload" title="Enviar PDF">📄
+              <input type="file" accept="application/pdf" onchange="uploadPDF('${p.numero}', '${p.codigo}', this)">
+            </label>
+          </td>
           <td style="text-align:center;">
             <div class="btn-email" onclick="enviarEmail('${p.numero}', '${p.fabrica}', '${p.codigo}', '${p.descricao}', '${p.quantidade}', '${p.pdf || ""}')">📧</div>
           </td>
@@ -249,7 +257,6 @@
       });
     }
 
-    // Filtro em tempo real
     document.getElementById("filtroFabrica").addEventListener("change", aplicarFiltros);
     document.getElementById("filtroNumero").addEventListener("input", aplicarFiltros);
 
