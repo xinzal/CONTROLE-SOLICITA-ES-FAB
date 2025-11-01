@@ -3,44 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Visualizar Pedidos - Anexar PDF</title>
+<title>LetsCargo - Visualizar Pedidos</title>
 <style>
   body { font-family: Arial, sans-serif; background-color: #f2f4f8; padding: 20px; }
   h1 { color: #003c8f; margin-bottom: 20px; }
   table { width: 100%; border-collapse: collapse; background-color: #fff; margin-top: 15px; }
   th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
   th { background-color: #0073c9; color: white; }
-  button { padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; background-color: #0073c9; color: white; }
-  button:hover { background-color: #005fa3; }
-  .modal { display: none; position: fixed; z-index: 10; left:0; top:0; width:100%; height:100%; background-color: rgba(0,0,0,0.5);}
-  .modal-content { background-color: white; margin: 10% auto; padding: 20px; width: 300px; border-radius: 8px; }
+  button { padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; }
+  .btn-acao { background-color: #0073c9; color: white; margin-right: 5px; }
+  .btn-acao:hover { background-color: #005fa3; }
+  .modal { display: none; position: fixed; z-index: 10; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+  .modal-content { background-color: white; margin: 10% auto; padding: 20px; width: 350px; border-radius: 8px; }
+  .modal-content h2 { margin-top: 0; }
+  .modal-content input, .modal-content select { width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 10px; box-sizing: border-box; }
   .close-btn { background-color: red; color: white; float: right; }
-  input[type="file"] { margin-top: 10px; margin-bottom: 10px; }
 </style>
 </head>
 <body>
 
-<h1>Visualizar Pedidos - Anexar PDF</h1>
+<h1>Visualizar Pedidos - LetsCargo</h1>
 
+<!-- FILTRO E PESQUISA -->
 <div style="margin-bottom: 10px;">
   <label for="filtroFabrica">Filtrar por Fábrica:</label>
   <select id="filtroFabrica" onchange="filtrarTabela()">
     <option value="">Todas</option>
   </select>
 
-  <label for="pesquisaPedido" style="margin-left:20px;">Pesquisar Nº Pedido:</label>
+  <label for="pesquisaPedido" style="margin-left: 20px;">Pesquisar Número do Pedido:</label>
   <input type="text" id="pesquisaPedido" oninput="filtrarTabela()" placeholder="Digite o número do pedido">
 </div>
 
 <table id="pedidosTable">
   <thead>
     <tr>
-      <th>Número</th>
+      <th>Número do Pedido</th>
       <th>Fábrica</th>
-      <th>Código</th>
+      <th>Código do Item</th>
       <th>Descrição</th>
       <th>Quantidade</th>
-      <th>Data</th>
+      <th>Data do Pedido</th>
       <th>Pallets</th>
       <th>Peso</th>
       <th>Estoque</th>
@@ -53,35 +56,45 @@
   </tbody>
 </table>
 
+<!-- Modal PDF -->
 <div id="modalPDF" class="modal">
   <div class="modal-content">
-    <button class="close-btn" onclick="fecharModal()">X</button>
+    <button class="close-btn" onclick="fecharModalPDF()">X</button>
     <h2>Anexar PDF</h2>
     <input type="file" id="arquivoPDF" accept="application/pdf">
-    <button onclick="enviarPDF()">Enviar</button>
+    <button class="btn-acao" onclick="enviarPDF()">Enviar PDF</button>
+  </div>
+</div>
+
+<!-- Modal Cadastro Emails -->
+<div id="modalEmail" class="modal">
+  <div class="modal-content">
+    <button class="close-btn" onclick="fecharModalEmail()">X</button>
+    <h2>Cadastro de Emails</h2>
+    <select id="fabricaEmail">
+      <option value="">Selecione a fábrica</option>
+    </select>
+    <input type="text" id="emailPrincipal" placeholder="Emails principais (separados por vírgula)">
+    <input type="text" id="emailCopia" placeholder="Emails cópia (separados por vírgula)">
+    <button class="btn-acao" onclick="cadastrarEmail()">Cadastrar Email</button>
   </div>
 </div>
 
 <script>
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz0nx3p-tBffTWt5l5Yc_wHjxZywybLNrLsM-cbJmsxfDzGaj1aGDqw5XU5CTsIatY-/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzud_UUDhC2weRGBucFLQCG_KmCOpojMvHWRUInQXgdr0Pmiq0rpcVk9uTOTHPlpEaJ/exec";
 let pedidos = [];
 let pedidoSelecionado = null;
 
 // ===== CARREGAR PEDIDOS =====
 async function carregarPedidos() {
   const tbody = document.getElementById("pedidosBody");
-  tbody.innerHTML = "<tr><td colspan='11'>Carregando...</td></tr>";
-
+  tbody.innerHTML = `<tr><td colspan="11">Carregando...</td></tr>`;
   try {
-    const res = await fetch(WEB_APP_URL);
+    const res = await fetch(WEB_APP_URL + "?action=get");
     pedidos = await res.json();
     tbody.innerHTML = "";
     pedidos.forEach((p, i) => {
       const tr = document.createElement("tr");
-      tr.dataset.index = i;
-      tr.dataset.numero = p.numero;
-      tr.dataset.fabrica = p.fabrica;
-      tr.dataset.codigo = p.codigo;
       tr.innerHTML = `
         <td>${p.numero}</td>
         <td>${p.fabrica}</td>
@@ -93,92 +106,108 @@ async function carregarPedidos() {
         <td>${p.peso}</td>
         <td>${p.estoque}</td>
         <td>${p.pdf ? `<a href="${p.pdf}" target="_blank">Ver PDF</a>` : ""}</td>
-        <td><button onclick="abrirModal(${i})">Anexar PDF</button></td>
+        <td>
+          <button class="btn-acao" onclick="abrirModalPDF(${i})">Enviar PDF</button>
+          <button class="btn-acao" onclick="enviarEmail(${i})">Enviar Email</button>
+        </td>
       `;
+      tr.dataset.index = i;
       tbody.appendChild(tr);
     });
     atualizarFiltroFabrica();
-    filtrarTabela();
-  } catch(err) {
-    tbody.innerHTML = "<tr><td colspan='11'>Erro ao carregar pedidos</td></tr>";
+    atualizarFabricaEmail();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="11">Erro ao carregar pedidos</td></tr>`;
   }
 }
 
 // ===== FILTRO =====
 function atualizarFiltroFabrica() {
   const select = document.getElementById("filtroFabrica");
-  select.innerHTML = "<option value=''>Todas</option>";
   const fabricas = [...new Set(pedidos.map(p => p.fabrica))];
   fabricas.forEach(f => {
-    const option = document.createElement("option");
-    option.value = f;
-    option.textContent = f;
-    select.appendChild(option);
+    if (![...select.options].some(o => o.value===f)) {
+      const opt = document.createElement("option"); opt.value=f; opt.textContent=f;
+      select.appendChild(opt);
+    }
   });
 }
 
 function filtrarTabela() {
-  const filtroFabrica = document.getElementById("filtroFabrica").value.toLowerCase();
-  const pesquisaPedido = document.getElementById("pesquisaPedido").value.toLowerCase();
-  const linhas = document.querySelectorAll("#pedidosBody tr");
-  linhas.forEach(tr => {
-    const numero = tr.dataset.numero.toLowerCase();
-    const fabrica = tr.dataset.fabrica.toLowerCase();
-    const mostrar = (filtroFabrica === "" || fabrica === filtroFabrica) &&
-                    (pesquisaPedido === "" || numero.includes(pesquisaPedido));
+  const filtro = document.getElementById("filtroFabrica").value.toLowerCase();
+  const pesquisa = document.getElementById("pesquisaPedido").value.toLowerCase();
+  document.querySelectorAll("#pedidosBody tr").forEach(tr=>{
+    const p = pedidos[tr.dataset.index];
+    const mostrar = (!filtro || p.fabrica.toLowerCase()===filtro) && (!pesquisa || p.numero.toLowerCase().includes(pesquisa));
     tr.style.display = mostrar ? "" : "none";
   });
 }
 
-// ===== MODAL =====
-function abrirModal(index) {
-  pedidoSelecionado = index;
-  document.getElementById("modalPDF").style.display = "block";
-}
-
-function fecharModal() {
-  document.getElementById("modalPDF").style.display = "none";
-  document.getElementById("arquivoPDF").value = "";
-}
-
-// ===== ENVIAR PDF =====
+// ===== MODAL PDF =====
+function abrirModalPDF(index) { pedidoSelecionado = pedidos[index]; document.getElementById("modalPDF").style.display="block"; }
+function fecharModalPDF() { document.getElementById("modalPDF").style.display="none"; pedidoSelecionado=null; document.getElementById("arquivoPDF").value=""; }
 async function enviarPDF() {
-  const fileInput = document.getElementById("arquivoPDF");
-  if (!fileInput.files.length) { alert("Selecione um PDF"); return; }
-  const file = fileInput.files[0];
+  if (!pedidoSelecionado) return alert("Selecione um pedido");
+  const arquivo = document.getElementById("arquivoPDF").files[0];
+  if (!arquivo) return alert("Selecione um arquivo PDF");
   const reader = new FileReader();
-  reader.onload = async function(e) {
+  reader.onload = async function(e){
     const base64 = e.target.result.split(",")[1];
-    const p = pedidos[pedidoSelecionado];
-
-    const formData = new FormData();
-    formData.append("pdf", base64);
-    formData.append("nomeArquivo", file.name);
-    formData.append("numero", p.numero);
-    formData.append("codigo", p.codigo);
-
-    try {
-      const res = await fetch(WEB_APP_URL, { method: "POST", body: formData });
-      const result = await res.json();
-      if (result.status === "success") {
-        alert("PDF enviado com sucesso!");
-        carregarPedidos();
-        fecharModal();
-      } else {
-        alert("Erro: " + result.message);
-      }
-    } catch(err) {
-      alert("Erro de conexão.");
-    }
-  }
-  reader.readAsDataURL(file);
+    const form = new FormData();
+    form.append("numero", pedidoSelecionado.numero);
+    form.append("codigo", pedidoSelecionado.codigo);
+    form.append("nomeArquivo", arquivo.name);
+    form.append("pdf", base64);
+    const res = await fetch(WEB_APP_URL, {method:"POST", body:form});
+    const data = await res.json();
+    if(data.status==="success"){ alert("PDF enviado!"); carregarPedidos(); fecharModalPDF(); }
+    else alert("Erro: "+data.message);
+  };
+  reader.readAsDataURL(arquivo);
 }
 
-// Fecha modal ao clicar fora
-window.onclick = function(event) {
-  if(event.target === document.getElementById("modalPDF")) fecharModal();
+// ===== MODAL EMAIL =====
+function atualizarFabricaEmail() {
+  const select = document.getElementById("fabricaEmail");
+  select.innerHTML = '<option value="">Selecione a fábrica</option>';
+  const fabricas = [...new Set(pedidos.map(p => p.fabrica))];
+  fabricas.forEach(f=>{
+    const opt = document.createElement("option"); opt.value=f; opt.textContent=f;
+    select.appendChild(opt);
+  });
+}
+function abrirModalEmail(){ document.getElementById("modalEmail").style.display="block"; }
+function fecharModalEmail(){ document.getElementById("modalEmail").style.display="none"; document.getElementById("emailPrincipal").value=""; document.getElementById("emailCopia").value=""; }
+async function cadastrarEmail(){
+  const fabrica = document.getElementById("fabricaEmail").value;
+  const principal = document.getElementById("emailPrincipal").value;
+  const copia = document.getElementById("emailCopia").value;
+  if(!fabrica || !principal) return alert("Selecione fábrica e emails principais");
+  const form = new FormData();
+  form.append("acao","cadastrarEmail");
+  form.append("fabrica",fabrica);
+  form.append("principal",principal);
+  form.append("copia",copia);
+  const res = await fetch(WEB_APP_URL,{method:"POST",body:form});
+  const data = await res.json();
+  if(data.status==="success"){ alert("Emails cadastrados!"); fecharModalEmail(); }
+  else alert("Erro: "+data.message);
 }
 
+// ===== ENVIO EMAIL =====
+async function enviarEmail(index){
+  const pedido = pedidos[index];
+  const form = new FormData();
+  form.append("acao","enviarEmail");
+  form.append("numero",pedido.numero);
+  form.append("codigo",pedido.codigo);
+  const res = await fetch(WEB_APP_URL,{method:"POST",body:form});
+  const data = await res.json();
+  if(data.status==="success"){ alert("Email enviado!"); }
+  else alert("Erro: "+data.message);
+}
+
+// ===== INÍCIO =====
 carregarPedidos();
 </script>
 
