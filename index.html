@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CONTROLE SOLICITAÇÕES FAB</title>
+<style>
+:root {
+  --primary: #003c8f;
+  --accent: #0277bd;
+  --bg: #f4f0f8;
+  --card: #fff;
+  --text: #333;
+}
+*{box-sizing:border-box}
+body{font-family:Arial,Helvetica,sans-serif;background-color:var(--bg);margin:0;color:var(--text)}
+header{background-color:var(--primary);color:#fff;padding:20px;text-align:center;font-size:24px;font-weight:700;border-bottom:4px solid rgba(0,0,0,0.03)}
+nav{display:flex;justify-content:center;margin:20px 0;gap:12px;flex-wrap:wrap;padding:0 12px}
+nav button{padding:10px 18px;font-size:15px;border:0;border-radius:8px;cursor:pointer;background-color:var(--accent);color:#fff;transition:transform .12s ease}
+nav button.active,nav button:hover{background-color:var(--primary);transform:translateY(-1px)}
+
+section{display:none;max-width:1200px;margin:12px auto;padding:18px;background:var(--card);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.06);overflow:auto}
+section.active{display:block}
+
+input,select,textarea{width:100%;padding:10px;margin-top:6px;border-radius:6px;border:1px solid #ccc;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 6px rgba(0,60,143,0.12)}
+button.send{margin-top:18px;padding:12px;background:var(--primary);color:#fff;font-weight:700;border:0;border-radius:6px;cursor:pointer;max-width:320px;width:100%}
+
+table{width:100%;border-collapse:collapse;margin-top:18px;font-size:14px;min-width:900px}
+th,td{border:1px solid #e6dff1;padding:10px;text-align:center;vertical-align:middle}
+th{background:var(--primary);color:#fff;font-weight:600}
+tr:nth-child(even){background:#fbf6fd}
+tr:hover{background:#f0e0fb}
+
+.actions button{margin:0 4px;padding:6px 10px;cursor:pointer;border-radius:6px;border:0}
+.actions button.delete{background:#ff6b6b;color:#fff}
+.actions button.email{background:var(--primary);color:#fff}
+
+#feedback{position:fixed;top:18px;right:18px;background:var(--primary);color:#fff;padding:10px 14px;border-radius:8px;display:none;box-shadow:0 10px 28px rgba(0,0,0,0.14);z-index:1300}
+</style>
+</head>
+<body>
+
+<header>CONTROLE SOLICITAÇÕES FAB</header>
+
+<nav>
+    <button id="btnView" class="active">Visualizar Solicitações</button>
+    <button id="btnEmails">Emails</button>
+</nav>
+
+<!-- Visualizar Solicitações -->
+<section id="viewSection" class="active">
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <div style="flex:1; min-width:220px;">
+            <label for="filtroFabrica">Filtrar por Fábrica:</label>
+            <select id="filtroFabrica" onchange="aplicarFiltroPesquisa()">
+                <option value="">Todas</option>
+                <option value="ICNB">ICNB</option>
+                <option value="UNA">UNA</option>
+                <option value="NATURELLE">NATURELLE</option>
+                <option value="DECOR">DECOR</option>
+                <option value="AERCAMP">AERCAMP</option>
+            </select>
+        </div>
+
+        <div style="flex:2; min-width:220px;">
+            <label for="searchInput">Pesquisar:</label>
+            <input type="text" id="searchInput" placeholder="Pesquise razão, pedido, fábrica..." oninput="aplicarFiltroPesquisa()">
+        </div>
+
+        <div style="min-width:220px;">
+            <label>&nbsp;</label>
+            <div style="display:flex; gap:8px;">
+                <button onclick="carregarSolicitacoes()">Atualizar</button>
+                <button onclick="exportCSV()">Exportar CSV</button>
+            </div>
+        </div>
+    </div>
+
+    <table id="solTable" aria-live="polite">
+        <thead>
+            <tr>
+                <th>Data/Hora</th>
+                <th>Razão Social</th>
+                <th>Nº Pedido</th>
+                <th>Fábrica</th>
+                <th>PDF</th>
+                <th>Observação</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody><tr><td colspan="7" style="text-align:center;">Carregando...</td></tr></tbody>
+    </table>
+</section>
+
+<!-- Emails -->
+<section id="emailsSection">
+    <form id="emailsForm">
+        <label for="emailFabrica">Fábrica:</label>
+        <select id="emailFabrica" required>
+            <option value="">--Selecione--</option>
+            <option value="ICNB">ICNB</option>
+            <option value="UNA">UNA</option>
+            <option value="NATURELLE">NATURELLE</option>
+            <option value="DECOR">DECOR</option>
+            <option value="AERCAMP">AERCAMP</option>
+        </select>
+
+        <label for="emailPara">E-mail(s) (separados por vírgula):</label>
+        <input type="text" id="emailPara" placeholder="ex: exemplo1@x.com,exemplo2@x.com">
+
+        <button type="button" class="send" onclick="salvarEmails()">Salvar E-mails</button>
+    </form>
+
+    <table id="emailsTable">
+        <thead><tr><th>Fábrica</th><th>E-mails</th></tr></thead>
+        <tbody><tr><td colspan="2" style="text-align:center;">Carregando...</td></tr></tbody>
+    </table>
+</section>
+
+<!-- Feedback -->
+<div id="feedback">Operação realizada com sucesso!</div>
+
+<script>
+const webAppURL = "https://script.google.com/macros/s/AKfycbyN2RngRzztw3NnHUADtQNqJ1ToANzx_KxBPIq-a_-EWCaqHO30st5hCnFxu-PClCqq/exec";
+let allData = [], workingData = [], currentPage = 1, rowsPerPage = 10;
+
+/* Navigation */
+const btnView = document.getElementById('btnView');
+const btnEmails = document.getElementById('btnEmails');
+const viewSection = document.getElementById('viewSection');
+const emailsSection = document.getElementById('emailsSection');
+
+btnView.onclick = ()=>{ btnView.classList.add('active'); btnEmails.classList.remove('active'); viewSection.classList.add('active'); emailsSection.classList.remove('active'); carregarSolicitacoes(); };
+btnEmails.onclick = ()=>{ btnEmails.classList.add('active'); btnView.classList.remove('active'); emailsSection.classList.add('active'); viewSection.classList.remove('active'); carregarEmails(); };
+
+/* Carregar solicitações */
+async function carregarSolicitacoes(){
+  try{
+    const res = await fetch(webAppURL + '?action=get');
+    allData = await res.json();
+    if(!Array.isArray(allData)) allData = [];
+    allData.sort((a,b)=> (new Date(b.dataHora||0) - new Date(a.dataHora||0)));
+    aplicarFiltroPesquisa();
+  }catch(err){ console.error(err); allData=[]; aplicarFiltroPesquisa(); }
+}
+
+/* Filtrar + pesquisar */
+function aplicarFiltroPesquisa(){
+  const filtro = document.getElementById('filtroFabrica').value || '';
+  const termo = (document.getElementById('searchInput').value||'').toLowerCase().trim();
+  workingData = allData.filter(r=>{
+    if(filtro && r.fabrica!==filtro) return false;
+    if(!termo) return true;
+    const combined = `${r.razao}|${r.pedido}|${r.fabrica}|${r.observacao||''}`.toLowerCase();
+    return combined.includes(termo);
+  });
+  currentPage=1;
+  renderTabela();
+}
+
+/* Render tabela */
+function renderTabela(){
+  const tbody = document.querySelector('#solTable tbody');
+  const totalItems = workingData.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems/rowsPerPage));
+  if(currentPage>totalPages) currentPage=totalPages;
+  const start=(currentPage-1)*rowsPerPage;
+  const end=Math.min(totalItems,start+rowsPerPage);
+  const frag=document.createDocumentFragment();
+
+  if(end-start===0){ const tr=document.createElement('tr'); const td=document.createElement('td'); td.colSpan=7; td.textContent='Nenhuma solicitação encontrada'; tr.appendChild(td); frag.appendChild(tr);}
+  else{
+    for(let i=start;i<end;i++){
+      const r=workingData[i];
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td>${r.dataHora||''}</td>
+        <td>${r.razao||''}</td>
+        <td>${r.pedido||''}</td>
+        <td>${r.fabrica||''}</td>
+        <td>${r.pdf ? `<a href="${r.pdf}" target="_blank">Abrir PDF</a>`:'-'}</td>
+        <td>${r.observacao||''}</td>
+        <td class="actions">
+          <button class="email" onclick="enviarEmail('${r.pedido}')">E-mail</button>
+          <button class="delete" onclick="excluirPedido('${r.pedido}')">Excluir</button>
+        </td>`;
+      frag.appendChild(tr);
+    }
+  }
+  tbody.innerHTML=''; tbody.appendChild(frag);
+}
+
+/* Excluir */
+async function excluirPedido(pedido){
+  if(!confirm(`Deseja realmente excluir o pedido ${pedido}?`)) return;
+  try{
+    await fetch(webAppURL, {method:'POST', body: JSON.stringify({action:'delete', pedido})});
+    showFeedback('Pedido excluído com sucesso!');
+    carregarSolicitacoes();
+  }catch(err){console.error(err); showFeedback('Erro ao excluir');}
+}
+
+/* Enviar Email */
+async function enviarEmail(pedido){
+  try{
+    await fetch(webAppURL,{method:'POST',body:JSON.stringify({action:'sendEmail', pedido})});
+    showFeedback('Email enviado com sucesso!');
+  }catch(err){console.error(err); showFeedback('Erro ao enviar email');}
+}
+
+/* Emails */
+async function carregarEmails(){
+  try{
+    const res = await fetch(webAppURL+'?action=getEmails');
+    const data = await res.json();
+    const tbody = document.querySelector('#emailsTable tbody');
+    tbody.innerHTML='';
+    if(!Array.isArray(data)||data.length===0){ tbody.innerHTML='<tr><td colspan="2" style="text-align:center;">Nenhum e-mail cadastrado</td></tr>'; return; }
+    data.forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${r.fabrica||''}</td><td>${r.emails||''}</td>`;
+      tbody.appendChild(tr);
+    });
+  }catch(err){console.error(err);}
+}
+
+async function salvarEmails(){
+  const fabrica=document.getElementById('emailFabrica').value;
+  const emails=document.getElementById('emailPara').value;
+  if(!fabrica || !emails){ showFeedback('Preencha todos os campos'); return; }
+  try{
+    await fetch(webAppURL,{method:'POST',body:JSON.stringify({action:'saveEmail', fabrica, emails})});
+    showFeedback('E-mails salvos com sucesso!');
+    carregarEmails();
+  }catch(err){console.error(err); showFeedback('Erro ao salvar');}
+}
+
+/* Feedback */
+function showFeedback(msg){
+  const f=document.getElementById('feedback');
+  f.textContent=msg;
+  f.style.display='block';
+  setTimeout(()=>f.style.display='none',3000);
+}
+
+/* Export CSV */
+function exportCSV(){
+  let csv="Data/Hora,Razão Social,Nº Pedido,Fábrica,PDF,Observação\n";
+  workingData.forEach(r=>{csv+=`"${r.dataHora||''}","${r.razao||''}","${r.pedido||''}","${r.fabrica||''}","${r.pdf||''}","${r.observacao||''}"\n`});
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download="solicitacoes.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* Inicial */
+carregarSolicitacoes();
+</script>
+
+</body>
+</html>
