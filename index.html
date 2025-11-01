@@ -54,6 +54,23 @@
   section.active {
     display: block;
   }
+  .filtros {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+  }
+  .filtros input, .filtros select {
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    transition: all 0.2s ease;
+  }
+  .filtros input:focus, .filtros select:focus {
+    border-color: #1a73e8;
+    outline: none;
+    box-shadow: 0 0 5px rgba(26,115,232,0.3);
+  }
   table {
     width: 100%;
     border-collapse: collapse;
@@ -74,20 +91,6 @@
   tr:hover {
     background: #f1f5f9;
   }
-  input, select {
-    padding: 8px;
-    margin: 5px 0 15px 0;
-    width: 100%;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-  }
-  input:focus, select:focus {
-    border-color: #1a73e8;
-    outline: none;
-    box-shadow: 0 0 5px rgba(26,115,232,0.3);
-  }
   button.upload {
     background: #34a853;
     color: white;
@@ -101,17 +104,20 @@
   button.upload:hover {
     background: #2c8c46;
   }
-  button.email {
+  .btn-email {
     background: #fbbc05;
-    color: black;
-    border-radius: 6px;
-    padding: 8px 15px;
-    margin-top: 5px;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     cursor: pointer;
-    border: none;
-    font-weight: bold;
+    transition: transform 0.2s, background 0.3s;
+    font-size: 18px;
   }
-  button.email:hover {
+  .btn-email:hover {
+    transform: scale(1.2);
     background: #e0a800;
   }
   form button[type="submit"] {
@@ -146,6 +152,14 @@
   <!-- ABA DE PEDIDOS -->
   <section id="pedidos" class="active">
     <h2>Pedidos</h2>
+
+    <div class="filtros">
+      <input type="text" id="filtroNumero" placeholder="Pesquisar por número do pedido">
+      <select id="filtroFabrica">
+        <option value="">Todas as fábricas</option>
+      </select>
+    </div>
+
     <table id="tabelaPedidos">
       <thead>
         <tr>
@@ -159,7 +173,8 @@
           <th>Peso</th>
           <th>Estoque</th>
           <th>PDF</th>
-          <th>Ações</th>
+          <th>Upload PDF</th>
+          <th>Enviar Email</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -182,6 +197,7 @@
 
   <script>
     const webAppUrl = "https://script.google.com/macros/s/AKfycbwyIQSVSSZdsc1AMqBI-UiO2dLErD5UnNKrnkWjhsMs8mMGpwPRYddE9gO0X66IGJCi/exec";
+    let pedidosCache = [];
 
     function mostrarAba(aba) {
       document.querySelectorAll("section").forEach(sec => sec.classList.remove("active"));
@@ -191,6 +207,24 @@
     async function carregarPedidos() {
       const res = await fetch(webAppUrl);
       const pedidos = await res.json();
+      pedidosCache = pedidos; // armazenar para filtro
+      preencherFiltros(pedidos);
+      atualizarTabela(pedidos);
+    }
+
+    function preencherFiltros(pedidos) {
+      const select = document.getElementById("filtroFabrica");
+      const fabricas = [...new Set(pedidos.map(p => p.fabrica))];
+      select.innerHTML = '<option value="">Todas as fábricas</option>';
+      fabricas.forEach(f => {
+        const option = document.createElement("option");
+        option.value = f;
+        option.textContent = f;
+        select.appendChild(option);
+      });
+    }
+
+    function atualizarTabela(pedidos) {
       const tbody = document.querySelector("#tabelaPedidos tbody");
       tbody.innerHTML = "";
       pedidos.forEach(p => {
@@ -206,13 +240,26 @@
           <td>${p.peso}</td>
           <td>${p.estoque}</td>
           <td>${p.pdf ? `<a href="${p.pdf}" target="_blank">Abrir</a>` : '—'}</td>
-          <td>
-            <input type="file" accept="application/pdf" onchange="uploadPDF('${p.numero}', '${p.codigo}', this)">
-            <button class="email" onclick="enviarEmail('${p.numero}', '${p.fabrica}', '${p.codigo}', '${p.descricao}', '${p.quantidade}', '${p.pdf || ""}')">Enviar Email</button>
+          <td><input type="file" accept="application/pdf" onchange="uploadPDF('${p.numero}', '${p.codigo}', this)"></td>
+          <td style="text-align:center;">
+            <div class="btn-email" onclick="enviarEmail('${p.numero}', '${p.fabrica}', '${p.codigo}', '${p.descricao}', '${p.quantidade}', '${p.pdf || ""}')">📧</div>
           </td>
         `;
         tbody.appendChild(tr);
       });
+    }
+
+    // Filtro em tempo real
+    document.getElementById("filtroFabrica").addEventListener("change", aplicarFiltros);
+    document.getElementById("filtroNumero").addEventListener("input", aplicarFiltros);
+
+    function aplicarFiltros() {
+      const numero = document.getElementById("filtroNumero").value.trim();
+      const fabrica = document.getElementById("filtroFabrica").value;
+      let filtrados = pedidosCache;
+      if (numero) filtrados = filtrados.filter(p => p.numero.includes(numero));
+      if (fabrica) filtrados = filtrados.filter(p => p.fabrica === fabrica);
+      atualizarTabela(filtrados);
     }
 
     async function uploadPDF(numero, codigo, input) {
@@ -223,12 +270,7 @@
         const base64 = e.target.result.split(",")[1];
         const res = await fetch(webAppUrl, {
           method: "POST",
-          body: new URLSearchParams({
-            pdf: base64,
-            nomeArquivo: file.name,
-            numero,
-            codigo
-          })
+          body: new URLSearchParams({ pdf: base64, nomeArquivo: file.name, numero, codigo })
         });
         const data = await res.json();
         alert(data.status === "success" ? "PDF enviado com sucesso!" : "Erro: " + data.message);
